@@ -1,30 +1,21 @@
-import { useCallback, useState } from "react";
-import { toaster } from "../../../ui/toaster";
-import { useOrganizationTeamProject } from "../../../../hooks/useOrganizationTeamProject";
-import { useHandleServerMessage } from "../../../../optimization_studio/hooks/useSocketClient";
-import type {
-  StudioClientEvent,
-  StudioServerEvent,
-} from "../../../../optimization_studio/types/events";
-import { useEvaluationWizardStore } from "./evaluation-wizard-store/useEvaluationWizardStore";
-import { getDebugger } from "../../../../utils/logger";
+import { useCallback, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { useOrganizationTeamProject } from "../../hooks/useOrganizationTeamProject";
+import { useHandleServerMessage } from "./useSocketClient";
+import { useWorkflowStore } from "./useWorkflowStore";
+import type { StudioClientEvent, StudioServerEvent } from "../types/events";
+import { createLogger } from "../../utils/logger";
+import { toaster } from "../../components/ui/toaster";
 
-const DEBUGGING_ENABLED = true;
-
-if (DEBUGGING_ENABLED) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require("debug").enable("langwatch:wizard:*");
-}
-
-const debug = getDebugger("langwatch:wizard:usePostEvent");
+const logger = createLogger("langwatch:wizard:usePostEvent");
 
 export const usePostEvent = () => {
   const { project } = useOrganizationTeamProject();
-  const { workflowStore, setEvaluationState } = useEvaluationWizardStore(
-    ({ workflowStore }) => ({
-      workflowStore,
-      setEvaluationState: workflowStore.setEvaluationState,
-    })
+  const workflowStore = useWorkflowStore();
+  const { setEvaluationState } = useWorkflowStore(
+    useShallow((state) => ({
+      setEvaluationState: state.setEvaluationState,
+    }))
   );
 
   const handleServerMessage = useHandleServerMessage({
@@ -58,6 +49,8 @@ export const usePostEvent = () => {
     [setEvaluationState]
   );
 
+  const postEventTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const postEvent = useCallback(
     (event: StudioClientEvent) => {
       if (!project) {
@@ -65,9 +58,8 @@ export const usePostEvent = () => {
       }
 
       void (async () => {
-        let timeout: NodeJS.Timeout | undefined;
         try {
-          timeout = setTimeout(() => {
+          postEventTimeoutRef.current = setTimeout(() => {
             handleTimeout(event);
           }, 20_000);
 
@@ -109,10 +101,10 @@ export const usePostEvent = () => {
                 const serverEvent: StudioServerEvent = JSON.parse(
                   event_.slice(6)
                 );
-                debug("Received SSE event:", serverEvent);
+                logger.info({ serverEvent, event }, "received message");
 
-                if (timeout) {
-                  clearTimeout(timeout);
+                if (postEventTimeoutRef.current) {
+                  clearTimeout(postEventTimeoutRef.current);
                 }
 
                 handleServerMessage(serverEvent);
@@ -170,8 +162,8 @@ export const usePostEvent = () => {
             });
           }
         } finally {
-          if (timeout) {
-            clearTimeout(timeout);
+          if (postEventTimeoutRef.current) {
+            clearTimeout(postEventTimeoutRef.current);
           }
           setIsLoading(false);
         }
@@ -180,5 +172,12 @@ export const usePostEvent = () => {
     [handleServerMessage, handleTimeout, project, setEvaluationState]
   );
 
-  return { postEvent, isLoading };
+  const stopLoading = useCallback(() => {
+    if (postEventTimeoutRef.current) {
+      clearTimeout(postEventTimeoutRef.current);
+    }
+    setIsLoading(false);
+  }, [setIsLoading]);
+
+  return { postEvent, isLoading, stopLoading };
 };

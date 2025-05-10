@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.9, !=3.9.7, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12.4'",
@@ -2121,7 +2122,7 @@ wheels = [
 
 [[package]]
 name = "langwatch"
-version = "0.2.0rc3"
+version = "0.2.0rc5"
 source = { editable = "." }
 dependencies = [
     { name = "coolname" },
@@ -2146,8 +2147,9 @@ dev = [
 dspy = [
     { name = "dspy-ai" },
 ]
-test = [
+tests = [
     { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.dev-dependencies]
@@ -2176,6 +2178,9 @@ examples = [
     { name = "streamlit" },
     { name = "uvicorn" },
 ]
+tests = [
+    { name = "pytest-asyncio" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -2191,11 +2196,13 @@ requires-dist = [
     { name = "opentelemetry-api", specifier = ">=1.32.1" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.32.1" },
     { name = "opentelemetry-sdk", specifier = ">=1.32.1" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=7.4.2,<8.0.0" },
+    { name = "pytest", marker = "extra == 'tests'", specifier = ">=7.4.2,<8.0.0" },
+    { name = "pytest-asyncio", marker = "extra == 'tests'", specifier = ">=0.21.1,<0.22.0" },
     { name = "retry", specifier = ">=0.9.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.1" },
     { name = "termcolor", specifier = ">=3.0.1" },
 ]
+provides-extras = ["dspy", "dev", "tests"]
 
 [package.metadata.requires-dev]
 examples = [
@@ -2223,6 +2230,7 @@ examples = [
     { name = "streamlit", specifier = ">=1.37.1,<2.0.0" },
     { name = "uvicorn", specifier = ">=0.25.0,<0.26.0" },
 ]
+tests = [{ name = "pytest-asyncio", specifier = ">=0.21.2" }]
 
 [[package]]
 name = "lazify"
@@ -3651,6 +3659,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/1f/9d8e98e4133ffb16c90f3b405c43e38d3abb715bb5d7a63a5a684f7e46a3/pytest-7.4.4.tar.gz", hash = "sha256:2cf0005922c6ace4a3e2ec8b4080eb0d9753fdc93107415332f50ce9e7994280", size = 1357116 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/ff/f6e8b8f39e08547faece4bd80f89d5a8de68a38b2d179cc1c4490ffa3286/pytest-7.4.4-py3-none-any.whl", hash = "sha256:b090cdf5ed60bf4c45261be03239c2c1c22df034fbffe691abe93cd80cea01d8", size = 325287 },
+]
+
+[[package]]
+name = "pytest-asyncio"
+version = "0.21.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/53/57663d99acaac2fcdafdc697e52a9b1b7d6fcf36616281ff9768a44e7ff3/pytest_asyncio-0.21.2.tar.gz", hash = "sha256:d67738fc232b94b326b9d060750beb16e0074210b98dd8b58a5239fa2a154f45", size = 30656 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/ce/1e4b53c213dce25d6e8b163697fbce2d43799d76fa08eea6ad270451c370/pytest_asyncio-0.21.2-py3-none-any.whl", hash = "sha256:ab664c88bb7998f711d8039cacd4884da6430886ae8bbd4eded552ed2004f16b", size = 13368 },
 ]
 
 [[package]]

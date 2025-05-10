@@ -8,6 +8,10 @@ import { getVercelAIModel } from "../../../../server/modelProviders/utils";
 import { smoothStream, streamText } from "ai";
 import { tools } from "./tools";
 
+import { createLogger } from "../../../../utils/logger";
+
+const logger = createLogger("langwatch:api:dataset:generate");
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions(req));
   if (!session) {
@@ -57,7 +61,9 @@ ${JSON.stringify(dataset)}
     `,
   });
 
-  const model = await getVercelAIModel(projectId);
+  const model = await getVercelAIModel(projectId, undefined, {
+    parallelToolCalls: false,
+  });
 
   const result = streamText({
     model,
@@ -70,7 +76,7 @@ ${JSON.stringify(dataset)}
     tools: tools,
     maxRetries: 3,
     onError: (error) => {
-      console.error("Error in streamText", error);
+      logger.error({ error }, "error in streamtext");
     },
   });
 

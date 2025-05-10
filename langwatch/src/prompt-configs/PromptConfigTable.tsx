@@ -1,7 +1,11 @@
-import { Box, Button, Table, Text } from "@chakra-ui/react";
-import { Trash } from "react-feather";
+import { Box, Button, HStack, IconButton, Table, Text } from "@chakra-ui/react";
+import { Edit, MoreVertical, Trash2 } from "react-feather";
 import type { LlmPromptConfig } from "@prisma/client";
 import { type ReactNode } from "react";
+import { Menu } from "~/components/ui/menu";
+import { GeneratePromptApiSnippetDialog } from "./components/GeneratePromptApiSnippetDialog";
+import { useOrganizationTeamProject } from "~/hooks/useOrganizationTeamProject";
+import { UnplugIcon } from "lucide-react";
 
 export type PromptConfigColumn = {
   key: string;
@@ -13,31 +17,71 @@ export type PromptConfigColumn = {
 
 export const createDefaultColumns = ({
   onDelete,
+  onEdit,
 }: {
   onDelete: (config: LlmPromptConfig) => Promise<void>;
+  onEdit: (config: LlmPromptConfig) => Promise<void>;
 }): PromptConfigColumn[] => [
   {
     key: "name",
     header: "Name",
-    width: "100%",
     render: (config) => <Text>{config.name}</Text>,
+  },
+  // Last Updated
+  {
+    key: "lastUpdated",
+    header: "Last Updated",
+    render: (config) => <Text>{config.updatedAt.toLocaleString()}</Text>,
   },
   {
     key: "actions",
     header: "Actions",
     textAlign: "center",
     render: (config) => (
-      <Button
-        size="sm"
-        variant="ghost"
-        colorScheme="red"
-        onClick={(e) => {
-          e.stopPropagation();
-          void onDelete(config);
-        }}
-      >
-        <Trash size={16} />
-      </Button>
+      <Menu.Root>
+        <Menu.Trigger asChild>
+          <Button
+            variant={"ghost"}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <MoreVertical />
+          </Button>
+        </Menu.Trigger>
+        <Menu.Content
+          onClick={(event) => {
+            // Prevent clicking from bubbling up to the onRowClick handler
+            event.stopPropagation();
+          }}
+        >
+          <Menu.Item
+            value="edit"
+            onClick={(event) => {
+              void onEdit(config);
+            }}
+          >
+            <Edit size={16} /> Edit prompt
+          </Menu.Item>
+          <Menu.Item value="generate-api-snippet">
+            <GeneratePromptApiSnippetDialog.Trigger>
+              <HStack>
+                <UnplugIcon />
+                <Text>Show API code snippet</Text>
+              </HStack>
+            </GeneratePromptApiSnippetDialog.Trigger>
+          </Menu.Item>
+          <Menu.Item
+            value="delete"
+            color="red.600"
+            onClick={(event) => {
+              void onDelete(config);
+            }}
+          >
+            <Trash2 size={16} /> Delete prompt
+          </Menu.Item>
+        </Menu.Content>
+      </Menu.Root>
     ),
   },
 ];
@@ -55,8 +99,10 @@ export function PromptConfigTable({
   columns,
   onRowClick,
 }: PromptConfigTableProps) {
-  if (isLoading) {
-    return <Text>Loading prompt configurations...</Text>;
+  const { project } = useOrganizationTeamProject();
+
+  if (isLoading || !project) {
+    return <Text>Loading prompts...</Text>;
   }
 
   if (configs.length === 0) {
@@ -78,38 +124,45 @@ export function PromptConfigTable({
   }
 
   return (
-    <Table.Root variant="line" fontSize="sm">
-      <Table.Header>
-        <Table.Row>
-          {columns.map((column) => (
-            <Table.ColumnHeader
-              key={column.key}
-              width={column.width}
-              textAlign={column.textAlign}
-            >
-              {column.header}
-            </Table.ColumnHeader>
-          ))}
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
-        {configs.map((config) => (
-          <Table.Row
-            key={config.id}
-            onClick={() => onRowClick?.(config)}
-            cursor={onRowClick ? "pointer" : "default"}
-          >
+    <>
+      <Table.Root variant="line" fontSize="sm">
+        <Table.Header>
+          <Table.Row>
             {columns.map((column) => (
-              <Table.Cell
-                key={`${config.id}-${column.key}`}
+              <Table.ColumnHeader
+                key={column.key}
+                width={column.width}
                 textAlign={column.textAlign}
               >
-                {column.render(config)}
-              </Table.Cell>
+                {column.header}
+              </Table.ColumnHeader>
             ))}
           </Table.Row>
-        ))}
-      </Table.Body>
-    </Table.Root>
+        </Table.Header>
+        <Table.Body>
+          {configs.map((config) => (
+            <GeneratePromptApiSnippetDialog
+              configId={config.id}
+              apiKey={project?.apiKey}
+            >
+              <Table.Row
+                key={config.id}
+                onClick={() => onRowClick?.(config)}
+                cursor={onRowClick ? "pointer" : "default"}
+              >
+                {columns.map((column) => (
+                  <Table.Cell
+                    key={`${config.id}-${column.key}`}
+                    textAlign={column.textAlign}
+                  >
+                    {column.render(config)}
+                  </Table.Cell>
+                ))}
+              </Table.Row>
+            </GeneratePromptApiSnippetDialog>
+          ))}
+        </Table.Body>
+      </Table.Root>
+    </>
   );
 }

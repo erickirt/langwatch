@@ -1,4 +1,5 @@
 import asyncio
+import json
 import threading
 import time
 from typing import List, Optional, Any, Literal
@@ -18,7 +19,7 @@ from langwatch_nlp.studio.types.events import (
     EvaluationStateChange,
     EvaluationStateChangePayload,
 )
-from langwatch_nlp.studio.utils import get_node_by_id
+from langwatch_nlp.studio.utils import SerializableWithStringFallback, get_node_by_id
 
 
 class Evaluator(dspy.Module):
@@ -193,8 +194,9 @@ class EvaluationReporting:
         }
         if error:
             predicted["error"] = str(error)
-        if "end" in node_results:
-            predicted["predicted"] = node_results["end"]
+        if "evaluations" in node_results:
+            del node_results["evaluations"]
+        predicted["predicted"] = node_results
 
         self.batch["dataset"].append(predicted)
 
@@ -209,7 +211,6 @@ class EvaluationReporting:
                 "status": result.status,
                 "index": example._index,
                 "duration": result.duration,
-                "inputs": result.inputs,
             }
 
             if result.status == "processed":
@@ -276,8 +277,11 @@ class EvaluationReporting:
     def post_results(cls, api_key: str, body: dict):
         response = httpx.post(
             f"{langwatch.endpoint}/api/evaluations/batch/log_results",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json=body,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(body, cls=SerializableWithStringFallback),  # type: ignore
             timeout=60,
         )
         response.raise_for_status()

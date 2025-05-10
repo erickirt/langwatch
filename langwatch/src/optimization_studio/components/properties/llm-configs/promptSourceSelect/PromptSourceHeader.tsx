@@ -1,7 +1,12 @@
-import { Text } from "@chakra-ui/react";
-import { HStack } from "@chakra-ui/react";
+import { HStack, Input, Text } from "@chakra-ui/react";
 import type { Node } from "@xyflow/react";
 import { useMemo } from "react";
+import { useFormContext } from "react-hook-form";
+
+import { parseLlmConfigVersion } from "~/server/prompt-config/repositories/llm-config-version-schema";
+import type { LlmConfigWithLatestVersion } from "~/server/prompt-config/repositories/llm-config.repository";
+
+import { InputGroup } from "../../../../../components/ui/input-group";
 
 import { PromptSource } from "./PromptSource";
 
@@ -19,12 +24,13 @@ import {
   llmConfigToPromptConfigFormValues,
 } from "~/prompt-configs/llmPromptConfigUtils";
 import { api } from "~/utils/api";
-import {
-  parseLlmConfigVersion,
-  type LatestConfigVersionSchema,
-} from "~/server/prompt-config/repositories/llm-config-version-schema";
-import type { LlmConfigWithLatestVersion } from "~/server/prompt-config/repositories/llm-config.repository";
-import { useFormContext } from "react-hook-form";
+import { createLogger } from "~/utils/logger";
+import { GeneratePromptApiSnippetDialog } from "~/prompt-configs/components/GeneratePromptApiSnippetDialog";
+import { GenerateApiSnippetButton } from "~/components/GenerateApiSnippetButton";
+
+const logger = createLogger(
+  "langwatch:optimization_studio:prompt_source_header"
+);
 
 export function PromptSourceHeader({
   node,
@@ -98,49 +104,87 @@ export function PromptSourceHeader({
   };
 
   // TODO: Move this outside of the component
-  const handleRestore = async (versionId: string) => {
-    try {
-      // Get the saved version
-      const savedVersion = await trpc.llmConfigs.versions.getById.fetch({
-        versionId,
-        projectId,
-      });
+  const handleRestore = (versionId: string) => {
+    void (async () => {
+      if (!savedConfig) {
+        // This should never happen
+        logger.error({ versionId, projectId }, "Missing llm prompt config");
+        toaster.error({
+          title: "Failed to restore prompt version",
+          description: "Missing prompt",
+        });
+        return;
+      }
 
-      // Convert the saved version to a form values object
-      const newFormValues = llmConfigToPromptConfigFormValues({
-        ...savedConfig,
-        latestVersion: parseLlmConfigVersion(savedVersion),
-      } as LlmConfigWithLatestVersion);
+      try {
+        // Get the saved version by id
+        const savedVersion = await trpc.llmConfigs.versions.getById.fetch({
+          versionId,
+          projectId,
+        });
 
-      // Update the form values
-      formProps.setValue(
-        "version.configData",
-        newFormValues.version.configData
-      );
-    } catch (error) {
-      console.error(error);
-      toaster.error({
-        title: "Failed to restore prompt version",
-        description: "Please try again.",
-      });
-    }
+        // Convert the saved version to a form values object
+        const newFormValues = llmConfigToPromptConfigFormValues({
+          ...savedConfig,
+          latestVersion: parseLlmConfigVersion(savedVersion),
+        });
+
+        // Update the form values
+        const currentFormValues = formProps.getValues();
+        formProps.reset({
+          ...currentFormValues,
+          version: newFormValues.version,
+        });
+      } catch (error) {
+        logger.error({ error, versionId }, "Failed to restore prompt version");
+        toaster.error({
+          title: "Failed to restore prompt version",
+          description: "Please try again.",
+        });
+      }
+    })();
   };
+
+  const { register, formState } = useFormContext<PromptConfigFormValues>();
+  const { errors } = formState;
 
   return (
     <VerticalFormControl
-      label="Source Prompt"
+      label="Versioned Prompt"
       width="full"
-      helper={
-        !savedConfig &&
-        !isLoadingSavedConfig && (
+      size="sm"
+      invalid={!!errors.name}
+      error={
+        errors.name ??
+        (!savedConfig && !isLoadingSavedConfig && (
           <Text fontSize="sm" color="red.500">
             This node&apos;s source prompt was deleted. Please save a new prompt
             version to continue using this configuration.
           </Text>
-        )
+        ))
       }
+      paddingBottom={4}
     >
       <HStack justifyContent="space-between">
+        <InputGroup
+          startElement={<Text fontSize="12px">Name:</Text>}
+          startOffset="-24px"
+          width="100%"
+        >
+          <Input
+            size="sm"
+            placeholder="Enter a name for this prompt"
+            {...register("name")}
+          />
+        </InputGroup>
+        <GeneratePromptApiSnippetDialog
+          configId={configId}
+          apiKey={project?.apiKey}
+        >
+          <GeneratePromptApiSnippetDialog.Trigger>
+            <GenerateApiSnippetButton />
+          </GeneratePromptApiSnippetDialog.Trigger>
+        </GeneratePromptApiSnippetDialog>
         <HStack flex={1} width="50%">
           <PromptSource configId={configId} onSelect={onPromptSourceSelect} />
         </HStack>

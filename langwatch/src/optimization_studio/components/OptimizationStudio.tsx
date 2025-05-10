@@ -60,7 +60,7 @@ import { Publish } from "./Publish";
 import { ResultsPanel } from "./ResultsPanel";
 import { UndoRedo } from "./UndoRedo";
 import { toaster } from "../../components/ui/toaster";
-import { WorkflowStoreProvider } from "../../components/evaluations/wizard/hooks/useWorkflowStoreProvider";
+import { WizardProvider } from "../../components/evaluations/wizard/hooks/useWizardContext";
 
 function DragDropArea({ children }: { children: React.ReactNode }) {
   const [_, drop] = useDrop(() => ({
@@ -200,7 +200,7 @@ export default function OptimizationStudio() {
       </Head>
       <ReactFlowProvider>
         <DndProvider backend={HTML5Backend}>
-          <WorkflowStoreProvider useWorkflowStoreFromWizard={false}>
+          <WizardProvider isInsideWizard={false}>
             <CustomDragLayer />
             <VStack width="full" height="full" gap={0}>
               <HStack
@@ -320,6 +320,10 @@ export default function OptimizationStudio() {
                           onPaneClick={() => {
                             setWorkflowSelected(true);
                           }}
+                          fitView
+                          fitViewOptions={{
+                            maxZoom: 1.2,
+                          }}
                         >
                           <Controls
                             position="bottom-left"
@@ -377,7 +381,7 @@ export default function OptimizationStudio() {
                 </Flex>
               </Box>
             </VStack>
-          </WorkflowStoreProvider>
+          </WizardProvider>
         </DndProvider>
       </ReactFlowProvider>
       <CurrentDrawer />

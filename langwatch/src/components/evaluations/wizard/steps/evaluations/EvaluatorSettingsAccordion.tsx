@@ -11,18 +11,20 @@ import { StepAccordion } from "../../components/StepAccordion";
 import { useOrganizationTeamProject } from "../../../../../hooks/useOrganizationTeamProject";
 import { useAvailableEvaluators } from "../../../../../hooks/useAvailableEvaluators";
 import type { EvaluatorTypes } from "../../../../../server/evaluations/evaluators.generated";
+import { usePublicEnv } from "../../../../../hooks/usePublicEnv";
 
 export const EvaluatorSettingsAccordion = () => {
   const { project } = useOrganizationTeamProject();
   const { wizardState, getFirstEvaluatorNode, setFirstEvaluator } =
     useEvaluationWizardStore();
+  const publicEnv = usePublicEnv();
 
   const evaluator = getFirstEvaluatorNode();
   const evaluatorType = evaluator?.data.evaluator;
   const availableEvaluators = useAvailableEvaluators();
 
   const schema =
-    evaluatorType && evaluatorType in availableEvaluators
+    evaluatorType && availableEvaluators && evaluatorType in availableEvaluators
       ? evaluatorsSchema.shape[evaluatorType as EvaluatorTypes]?.shape.settings
       : undefined;
 
@@ -44,10 +46,11 @@ export const EvaluatorSettingsAccordion = () => {
     | undefined =
     Object.keys(settingsFromParameters).length > 0
       ? (settingsFromParameters as any)
-      : evaluatorType
+      : evaluatorType && availableEvaluators
       ? getEvaluatorDefaultSettings(
           availableEvaluators[evaluatorType as EvaluatorTypes],
-          project
+          project,
+          publicEnv.data?.IS_ATLA_DEFAULT_JUDGE
         )
       : undefined;
 
@@ -61,18 +64,9 @@ export const EvaluatorSettingsAccordion = () => {
     },
   });
 
-  useEffect(() => {
-    if (!defaultSettings) return;
-
-    form.reset({
-      settings: defaultSettings,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evaluatorType]);
-
   const onSubmit = useCallback(
     (data: { settings?: Record<string, any> }) => {
-      if (!evaluatorType) return;
+      if (!evaluatorType || !availableEvaluators) return;
 
       // This updates the evaluator node with the settings
       setFirstEvaluator(
@@ -92,6 +86,16 @@ export const EvaluatorSettingsAccordion = () => {
     },
     [availableEvaluators, evaluatorType, setFirstEvaluator]
   );
+
+  useEffect(() => {
+    if (!defaultSettings) return;
+
+    form.reset({
+      settings: defaultSettings,
+    });
+    onSubmit({ settings: defaultSettings });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evaluatorType]);
 
   const formRenderedFor = useRef<string>(evaluatorType);
 

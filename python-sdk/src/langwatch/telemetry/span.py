@@ -59,6 +59,8 @@ from langwatch.utils.initialization import ensure_setup
 
 if TYPE_CHECKING:
     from .tracing import LangWatchTrace
+    from langwatch.evaluations import BasicEvaluateData
+
 
 __all__ = ["span", "LangWatchSpan"]
 
@@ -422,14 +424,12 @@ class LangWatchSpan:
         input: Optional[str] = None,
         output: Optional[str] = None,
         expected_output: Optional[str] = None,
-        contexts: Union[List[RAGChunk], List[str]] = [],
-        conversation: Conversation = [],
+        contexts: Optional[Union[List[RAGChunk], List[str]]] = None,
+        conversation: Optional[Conversation] = None,
         settings: Optional[Dict[str, Any]] = None,
         as_guardrail: bool = False,
+        data: Optional[Union["BasicEvaluateData", Dict[str, Any]]] = None,
     ):
-        contexts = contexts or []
-        conversation = conversation or []
-
         from langwatch import evaluations
 
         return evaluations.evaluate(
@@ -443,6 +443,7 @@ class LangWatchSpan:
             conversation=conversation,
             settings=settings,
             as_guardrail=as_guardrail,
+            data=data,
         )
 
     async def async_evaluate(
@@ -452,14 +453,12 @@ class LangWatchSpan:
         input: Optional[str] = None,
         output: Optional[str] = None,
         expected_output: Optional[str] = None,
-        contexts: Union[List[RAGChunk], List[str]] = [],
-        conversation: Conversation = [],
+        contexts: Optional[Union[List[RAGChunk], List[str]]] = None,
+        conversation: Optional[Conversation] = None,
         settings: Optional[Dict[str, Any]] = None,
         as_guardrail: bool = False,
+        data: Optional[Union["BasicEvaluateData", Dict[str, Any]]] = None,
     ):
-        contexts = contexts or []
-        conversation = conversation or []
-
         from langwatch import evaluations
 
         return await evaluations.async_evaluate(
@@ -473,6 +472,7 @@ class LangWatchSpan:
             conversation=conversation,
             settings=settings,
             as_guardrail=as_guardrail,
+            data=data,
         )
 
     def end(

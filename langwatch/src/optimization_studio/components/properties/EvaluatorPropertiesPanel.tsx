@@ -16,9 +16,11 @@ import { useWorkflowStore } from "../../hooks/useWorkflowStore";
 import { useDebouncedCallback } from "use-debounce";
 import { useOrganizationTeamProject } from "../../../hooks/useOrganizationTeamProject";
 import { useAvailableEvaluators } from "../../../hooks/useAvailableEvaluators";
+import { usePublicEnv } from "../../../hooks/usePublicEnv";
 
 export function EvaluatorPropertiesPanel({ node }: { node: Node<Evaluator> }) {
   const { project } = useOrganizationTeamProject();
+  const publicEnv = usePublicEnv();
   const { setNode } = useWorkflowStore(({ setNode }) => ({ setNode }));
 
   const settingsFromParameters = Object.fromEntries(
@@ -43,7 +45,12 @@ export function EvaluatorPropertiesPanel({ node }: { node: Node<Evaluator> }) {
   const availableEvaluators = useAvailableEvaluators();
 
   useEffect(() => {
-    if (!evaluator || !(evaluator in availableEvaluators)) return;
+    if (
+      !evaluator ||
+      !availableEvaluators ||
+      !(evaluator in availableEvaluators)
+    )
+      return;
     if (node.data.parameters) return;
 
     const evaluatorDefinition =
@@ -70,7 +77,11 @@ export function EvaluatorPropertiesPanel({ node }: { node: Node<Evaluator> }) {
     };
 
     setDefaultSettings(
-      getEvaluatorDefaultSettings(evaluatorDefinition, project),
+      getEvaluatorDefaultSettings(
+        evaluatorDefinition,
+        project,
+        publicEnv.data?.IS_ATLA_DEFAULT_JUDGE
+      ),
       "settings"
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps

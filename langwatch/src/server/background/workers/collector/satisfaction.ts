@@ -5,6 +5,9 @@ import type { Trace } from "../../../tracer/types";
 import { prepareLitellmParams } from "~/server/api/routers/modelProviders";
 import { OPENAI_EMBEDDING_DIMENSION } from "../../../../utils/constants";
 import { lambdaFetch } from "../../../../utils/lambdaFetch";
+import { createLogger } from "../../../../utils/logger";
+
+const logger = createLogger("langwatch:workers:collector:satisfaction");
 
 type SatisfactionScoreResult = {
   score_normalized: number;
@@ -28,8 +31,9 @@ export const scoreSatisfactionFromInput = async ({
   }
 
   if (!input?.value) {
-    console.warn(
-      `Trace ID ${traceId} input is empty, skipping satisfaction score`
+    logger.warn(
+      { traceId },
+      "trace ID input is empty, skipping satisfaction score"
     );
     return;
   }

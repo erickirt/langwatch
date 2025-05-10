@@ -1,11 +1,4 @@
-import {
-  Button,
-  Container,
-  HStack,
-  Heading,
-  VStack,
-  Flex,
-} from "@chakra-ui/react";
+import { Flex, Spacer } from "@chakra-ui/react";
 import { type LlmPromptConfig } from "@prisma/client";
 import { useState, useMemo } from "react";
 import { Plus } from "react-feather";
@@ -20,6 +13,7 @@ import {
   PromptConfigTable,
 } from "~/prompt-configs/PromptConfigTable";
 import { api } from "~/utils/api";
+import { PageLayout } from "~/components/ui/layouts/PageLayout";
 
 export default function PromptConfigsPage() {
   const utils = api.useContext();
@@ -34,10 +28,13 @@ export default function PromptConfigsPage() {
   };
 
   // Fetch prompt configs
-  const { data: promptConfigs, refetch: refetchPromptConfigs } =
-    api.llmConfigs.getPromptConfigs.useQuery(
-      {
-        projectId: project?.id ?? "",
+  const {
+    data: promptConfigs,
+    refetch: refetchPromptConfigs,
+    isLoading,
+  } = api.llmConfigs.getPromptConfigs.useQuery(
+    {
+      projectId: project?.id ?? "",
       },
       {
         enabled: !!project?.id,
@@ -89,10 +86,12 @@ export default function PromptConfigsPage() {
       }
 
       // Create with defaults
-      await createConfigWithInitialVersionMutation.mutateAsync({
+      const result = await createConfigWithInitialVersionMutation.mutateAsync({
         name: "New Prompt Config",
         projectId: project.id,
       });
+
+      setSelectedConfigId(result.id);
     } catch (error) {
       toaster.create({
         title: "Error creating prompt config",
@@ -102,13 +101,6 @@ export default function PromptConfigsPage() {
     }
 
     void refetchPromptConfigs();
-    toaster.create({
-      title: "Prompt config created",
-      type: "success",
-      meta: {
-        closable: true,
-      },
-    });
   };
 
   const handleDeleteConfig = (config: LlmPromptConfig) => {
@@ -141,6 +133,10 @@ export default function PromptConfigsPage() {
         handleDeleteConfig(config);
         return Promise.resolve();
       },
+      onEdit: (config) => {
+        setSelectedConfigId(config.id);
+        return Promise.resolve();
+      },
     });
   }, []);
 
@@ -152,28 +148,28 @@ export default function PromptConfigsPage() {
         width="100%"
         position="relative"
       >
-        <Container padding={6} height="full" width="full">
-          <VStack align="start" width="full">
-            {/* Header with title and "Create New" button */}
-            <HStack width="full" justifyContent="space-between">
-              <Heading as="h1" size="lg">
-                Prompts
-              </Heading>
-              <Button
-                colorPalette="blue"
-                minWidth="fit-content"
-                onClick={() => void handleCreateButtonClick()}
-              >
-                <Plus height={16} /> Create New
-              </Button>
-            </HStack>
+        <PageLayout.Container
+          maxW={"calc(100vw - 200px)"}
+          padding={6}
+          marginTop={8}
+        >
+          <PageLayout.Header>
+            <PageLayout.Heading>Prompts</PageLayout.Heading>
+            <Spacer />
+            <PageLayout.HeaderButton
+              onClick={() => void handleCreateButtonClick()}
+            >
+              <Plus height={16} /> Create New
+            </PageLayout.HeaderButton>
+          </PageLayout.Header>
+          <PageLayout.Content>
             <PromptConfigTable
               configs={promptConfigs ?? []}
-              isLoading={false}
+              isLoading={isLoading}
               onRowClick={(config) => setSelectedConfigId(config.id)}
               columns={defaultColumns}
             />
-          </VStack>
+          </PageLayout.Content>
 
           <DeleteConfirmationDialog
             title="Are you really sure?"
@@ -184,7 +180,7 @@ export default function PromptConfigsPage() {
               void confirmDeleteConfig();
             }}
           />
-        </Container>
+        </PageLayout.Container>
         <PromptConfigPanel
           isOpen={!!selectedConfigId}
           onClose={closePanel}

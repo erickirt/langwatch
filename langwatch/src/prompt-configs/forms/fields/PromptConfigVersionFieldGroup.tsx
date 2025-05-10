@@ -11,8 +11,9 @@ import { Plus } from "lucide-react";
 import { Trash2 } from "react-feather";
 import { useFieldArray, useFormContext } from "react-hook-form";
 
-import type { PromptConfigFormValues } from "../../hooks/usePromptConfigForm";
-import { TypeSelector } from "../../ui/TypeSelector";
+import { PropertySectionTitle } from "~/optimization_studio/components/properties/BasePropertiesPanel";
+import type { PromptConfigFormValues } from "~/prompt-configs/hooks/usePromptConfigForm";
+import { TypeSelector } from "~/prompt-configs/components/ui/TypeSelector";
 
 /**
  * Reusable component for a group of fields (inputs, outputs)
@@ -104,9 +105,7 @@ function FieldGroupHeader({
 }) {
   return (
     <HStack width="full">
-      <Text fontSize="sm" fontWeight="semibold">
-        {title}
-      </Text>
+      <PropertySectionTitle>{title}</PropertySectionTitle>
       <Spacer />
       {!readOnly && (
         <Button size="xs" variant="ghost" onClick={onAdd}>
@@ -143,10 +142,12 @@ function FieldRow({
   const fieldIdBase = `version.configData.${name}.${index}`;
   const identifierFieldId = `${fieldIdBase}.identifier`;
   const typeFieldId = `${fieldIdBase}.type`;
+  const jsonSchemaFieldId = `${fieldIdBase}.json_schema`;
 
   const currentIdentifier =
     getValues(identifierFieldId) ?? field.identifier ?? "";
   const currentType = getValues(typeFieldId) ?? field.type ?? "str";
+  const currentJsonSchema = getValues(jsonSchemaFieldId);
 
   return (
     <Field.Root key={field.id} invalid={!!error}>
@@ -191,8 +192,10 @@ function FieldRow({
           <TypeSelector
             name={typeFieldId}
             value={currentType}
-            onChange={(value) => {
+            jsonSchema={currentJsonSchema}
+            onChange={(value, jsonSchema) => {
               onChange(typeFieldId, value);
+              onChange(jsonSchemaFieldId, jsonSchema);
             }}
             isInput={name === "inputs"}
             readOnly={readOnly}
